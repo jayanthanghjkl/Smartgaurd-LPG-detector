@@ -107,7 +107,7 @@ const Monitor: React.FC = () => {
                 isDemo ? 'bg-blue-500 text-white border-blue-400' : 'bg-emerald-500 text-black border-emerald-400'
               }`}
             >
-              {isDemo ? <Activity size={22} strokeWidth={3} /> : <ShieldCheck size={22} strokeWidth={3} />}
+             
             </motion.div>
           )}
         </div>
