@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 // Fixing react-router-dom type errors by using any cast
 import * as ReactRouterDOM from 'react-router-dom';
@@ -127,7 +126,7 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-[var(--bg-primary)]">
+    <div className="min-h-screen min-h-[100dvh] flex items-center justify-center p-6 bg-[var(--bg-primary)]">
       <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass max-w-md w-full p-10 rounded-[40px] shadow-2xl space-y-8">
         <div className="text-center space-y-2">
           <div className="w-16 h-16 bg-emerald-500 rounded-3xl mx-auto flex items-center justify-center shadow-2xl mb-4">
@@ -156,9 +155,9 @@ const DashboardLayout = () => {
   if (!isAuthenticated) return <AuthPage />;
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]">
+    <div className="min-h-screen min-h-[100dvh] flex flex-col md:flex-row bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <Sidebar />
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col relative">
         <MobileTopNav />
         <main className="flex-1 relative overflow-y-auto overflow-x-hidden pb-32 md:pb-0">
           <AnimatePresence mode="wait">

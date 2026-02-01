@@ -1,9 +1,8 @@
-
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SmartGuard Dashboard</title>
     
     <!-- PWA & Mobile Meta -->
@@ -58,18 +57,18 @@
 
       .custom-scrollbar::-webkit-scrollbar { height: 6px; }
     </style>
-    <!-- Module entry point for production builds -->
+    <!-- Entry point -->
     <script type="module" src="./index.tsx"></script>
 <script type="importmap">
 {
   "imports": {
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
     "recharts": "https://esm.sh/recharts@^3.7.0",
     "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
     "react-router-dom": "https://esm.sh/react-router-dom@^7.13.0",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "framer-motion": "https://esm.sh/framer-motion@^12.29.2",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react": "https://esm.sh/react@^19.2.4"
+    "framer-motion": "https://esm.sh/framer-motion@^12.29.2"
   }
 }
 </script>
