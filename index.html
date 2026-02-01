@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>SmartGuard Dashboard</title>
     
     <!-- PWA & Mobile Meta -->
@@ -12,6 +12,32 @@
     <meta name="apple-mobile-web-app-title" content="SmartGuard" />
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1085/1085803.png" />
     
+    <!-- MOBILE DEBUGGER: Captures and displays errors on screen if the app fails to load -->
+    <script>
+      window.onerror = function(msg, url, line, col, error) {
+        var div = document.createElement('div');
+        div.style.position = 'fixed';
+        div.style.top = '0';
+        div.style.left = '0';
+        div.style.width = '100%';
+        div.style.zIndex = '999999';
+        div.style.background = '#f44336';
+        div.style.color = 'white';
+        div.style.padding = '20px';
+        div.style.fontSize = '12px';
+        div.style.fontFamily = 'monospace';
+        div.style.wordBreak = 'break-all';
+        div.innerHTML = '<strong>RUNTIME ERROR:</strong><br>' + msg + '<br>Line: ' + line + '<br>Source: ' + url;
+        document.body.appendChild(div);
+        return false;
+      };
+      
+      // Prevent standard ESM import errors from being silent
+      window.addEventListener('unhandledrejection', function(event) {
+        window.onerror('Promise Rejection: ' + event.reason);
+      });
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -57,18 +83,18 @@
 
       .custom-scrollbar::-webkit-scrollbar { height: 6px; }
     </style>
-    <!-- Entry point -->
+    <!-- Entry point - Bundler handles ESM resolution -->
     <script type="module" src="./index.tsx"></script>
 <script type="importmap">
 {
   "imports": {
-    "react/": "https://esm.sh/react@^19.2.4/",
     "react": "https://esm.sh/react@^19.2.4",
-    "recharts": "https://esm.sh/recharts@^3.7.0",
-    "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
-    "react-router-dom": "https://esm.sh/react-router-dom@^7.13.0",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "framer-motion": "https://esm.sh/framer-motion@^12.29.2"
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.13.0",
+    "framer-motion": "https://esm.sh/framer-motion@^12.29.2",
+    "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
+    "recharts": "https://esm.sh/recharts@^3.7.0"
   }
 }
 </script>
