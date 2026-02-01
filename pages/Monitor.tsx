@@ -103,9 +103,7 @@ const Monitor: React.FC = () => {
             <motion.div 
               initial={{ opacity: 0, scale: 0.5, x: 20 }}
               animate={{ opacity: 1, scale: 1, x: 0 }}
-              className={`absolute top-8 right-6 p-3 rounded-2xl shadow-2xl z-40 border transition-colors ${
-                isDemo ? 'bg-blue-500 text-white border-blue-400' : 'bg-emerald-500 text-black border-emerald-400'
-              }`}
+              
             >
              
             </motion.div>
