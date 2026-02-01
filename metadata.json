@@ -1,0 +1,7 @@
+{
+  "name": "Copy of SmartGuard IoT Safety Dashboard",
+  "description": "A high-end, OLED-optimized IoT safety dashboard featuring liquid gauges, dynamic status islands, and real-time gas monitoring visualizations for industrial or home safety nodes.",
+  "requestFramePermissions": [
+    "bluetooth"
+  ]
+}
