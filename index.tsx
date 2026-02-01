@@ -3,8 +3,8 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 
 /**
- * PRODUCTION POLYFILLS
- * Essential for mobile browsers that might not have Node-like environment globals.
+ * CRITICAL POLYFILLS
+ * Must run before any other logic to prevent 'process' or 'global' reference errors.
  */
 (window as any).global = window;
 if (typeof (window as any).process === 'undefined') {
@@ -15,14 +15,16 @@ if (typeof (window as any).process === 'undefined') {
   };
 }
 
-const rootElement = document.getElementById('root');
+const mountApp = () => {
+  const rootElement = document.getElementById('root');
 
-if (!rootElement) {
-  const errorMsg = "Critical: Root element #root not found in DOM.";
-  console.error(errorMsg);
-  // Manual fallback for mobile users to see the error
-  document.body.innerHTML = `<div style="padding:40px; color:red; font-family:sans-serif;">${errorMsg}</div>`;
-} else {
+  if (!rootElement) {
+    const errorMsg = "Critical: Root element #root not found in DOM.";
+    console.error(errorMsg);
+    document.body.innerHTML = `<div style="padding:40px; color:red; font-family:sans-serif;">${errorMsg}</div>`;
+    return;
+  }
+
   try {
     const root = ReactDOM.createRoot(rootElement);
     root.render(
@@ -30,9 +32,18 @@ if (!rootElement) {
         <App />
       </React.StrictMode>
     );
-  } catch (err) {
+  } catch (err: any) {
     console.error("React Mounting Error:", err);
-    // This will be caught by the window.onerror handler in index.html and displayed
-    throw err;
+    // Explicitly trigger the window.onerror for the mobile debug overlay
+    if (window.onerror) {
+      window.onerror(err.message || String(err), 'index.tsx', 0, 0, err);
+    }
   }
+};
+
+// Wait for DOM to be ready to ensure #root exists on slow mobile parses
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', mountApp);
+} else {
+  mountApp();
 }
