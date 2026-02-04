@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 // Fixing react-router-dom type errors by using any cast
 import * as ReactRouterDOM from 'react-router-dom';
@@ -26,7 +27,7 @@ const NAVIGATION = [
 const Sidebar = () => {
   const { status, connectionType, toggleTheme, settings, setAuthenticated } = useSafety();
   return (
-    <nav className="hidden md:flex flex-col w-64 glass border-r border-[var(--border-primary)] p-6 space-y-8 z-20">
+    <nav className="hidden md:flex flex-col w-64 glass border-r border-[var(--border-primary)] p-6 space-y-8 z-20 shrink-0 h-screen sticky top-0">
       <div className="flex items-center gap-3 px-2">
         <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)]">
           <AlertTriangle size={24} className="text-black" />
@@ -41,12 +42,12 @@ const Sidebar = () => {
       </div>
 
       <div className="space-y-4">
-        <button onClick={toggleTheme} className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-zinc-500 hover:text-[var(--text-primary)] hover:bg-white/5 transition-all">
+        <button onClick={toggleTheme} className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-zinc-500 hover:text-[var(--text-primary)] hover:bg-[var(--border-primary)] transition-all">
           {settings.theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
           <span className="font-medium">{settings.theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
         </button>
 
-        <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+        <div className="bg-[var(--bg-secondary)] p-4 rounded-2xl border border-[var(--border-primary)]">
           <p className="text-xs text-zinc-500 uppercase font-bold tracking-wider mb-2">Network Status</p>
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full animate-pulse ${status === 'safe' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
@@ -87,7 +88,7 @@ const MobileBottomNav = () => {
   const location = useLocation();
   return (
     <nav className="md:hidden fixed bottom-6 left-4 right-4 z-50">
-      <div className="glass border border-white/10 rounded-[32px] p-1.5 flex items-center justify-between shadow-2xl backdrop-blur-3xl">
+      <div className="glass border border-[var(--border-primary)] rounded-[32px] p-1.5 flex items-center justify-between shadow-2xl backdrop-blur-3xl">
         {NAVIGATION.map((item) => {
           const isActive = location.pathname === item.path;
           return (
@@ -155,11 +156,11 @@ const DashboardLayout = () => {
   if (!isAuthenticated) return <AuthPage />;
 
   return (
-    <div className="min-h-screen min-h-[100dvh] flex flex-col md:flex-row bg-[var(--bg-primary)] text-[var(--text-primary)]">
+    <div className="min-h-screen min-h-[100dvh] flex flex-col md:flex-row bg-[var(--bg-primary)] text-[var(--text-primary)] overflow-hidden">
       <Sidebar />
-      <div className="flex-1 flex flex-col relative">
+      <div className="flex-1 flex flex-col relative h-screen overflow-hidden">
         <MobileTopNav />
-        <main className="flex-1 relative overflow-y-auto overflow-x-hidden pb-32 md:pb-0">
+        <main className="flex-1 relative overflow-y-auto overflow-x-hidden pb-32 md:pb-6 custom-scrollbar">
           <AnimatePresence mode="wait">
             <Routes>
               <Route path="/" element={<Monitor />} />
@@ -183,7 +184,7 @@ const NavLink: React.FC<{ item: (typeof NAVIGATION)[number] }> = ({ item }) => {
   return (
     <Link to={item.path} className="block">
       <motion.div 
-        className={`flex items-center gap-4 px-4 py-3 rounded-2xl transition-all ${isActive ? 'bg-emerald-500 text-black shadow-xl' : 'text-zinc-500 hover:text-[var(--text-primary)] hover:bg-white/5'}`} 
+        className={`flex items-center gap-4 px-4 py-3 rounded-2xl transition-all ${isActive ? 'bg-emerald-500 text-black shadow-xl' : 'text-zinc-500 hover:text-[var(--text-primary)] hover:bg-[var(--border-primary)]'}`} 
         whileHover={{ x: 4 }}
       >
         <item.icon size={20} />

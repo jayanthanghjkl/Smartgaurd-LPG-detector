@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 // Fixing framer-motion type errors by using any cast
 import * as FramerMotion from 'framer-motion';
@@ -56,7 +57,7 @@ const SettingsPage: React.FC = () => {
         <h3 className="text-sm font-black uppercase tracking-widest text-zinc-600 mb-4 flex items-center gap-2">
           <Database size={16} /> Supabase Integration (Real-time Cloud)
         </h3>
-        <div className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-6">
+        <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-3xl p-8 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">Project URL</label>
@@ -66,7 +67,7 @@ const SettingsPage: React.FC = () => {
                   value={localSettings.supabaseUrl}
                   onChange={e => setLocalSettings(prev => ({ ...prev, supabaseUrl: e.target.value }))}
                   placeholder="https://xyz.supabase.co"
-                  className="w-full glass rounded-2xl pl-12 pr-6 py-4 outline-none focus:border-emerald-500 transition-all text-white bg-transparent"
+                  className="w-full glass rounded-2xl pl-12 pr-6 py-4 outline-none focus:border-emerald-500 transition-all text-[var(--text-primary)] bg-transparent"
                 />
               </div>
             </div>
@@ -79,7 +80,7 @@ const SettingsPage: React.FC = () => {
                   value={localSettings.supabaseKey}
                   onChange={e => setLocalSettings(prev => ({ ...prev, supabaseKey: e.target.value }))}
                   placeholder="••••••••••••••••"
-                  className="w-full glass rounded-2xl pl-12 pr-6 py-4 outline-none focus:border-emerald-500 transition-all text-white bg-transparent"
+                  className="w-full glass rounded-2xl pl-12 pr-6 py-4 outline-none focus:border-emerald-500 transition-all text-[var(--text-primary)] bg-transparent"
                 />
               </div>
             </div>
@@ -91,7 +92,7 @@ const SettingsPage: React.FC = () => {
         <h3 className="text-sm font-black uppercase tracking-widest text-zinc-600 mb-4 flex items-center gap-2">
           <Cloud size={16} /> Legacy Support (ThingSpeak)
         </h3>
-        <div className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-6">
+        <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-3xl p-8 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">Channel ID</label>
@@ -101,7 +102,7 @@ const SettingsPage: React.FC = () => {
                   value={localSettings.thingSpeakChannelId}
                   onChange={e => setLocalSettings(prev => ({ ...prev, thingSpeakChannelId: e.target.value }))}
                   placeholder="e.g. 2347141"
-                  className="w-full glass rounded-2xl pl-12 pr-6 py-4 outline-none focus:border-emerald-500 transition-all text-white bg-transparent"
+                  className="w-full glass rounded-2xl pl-12 pr-6 py-4 outline-none focus:border-emerald-500 transition-all text-[var(--text-primary)] bg-transparent"
                 />
               </div>
             </div>
@@ -114,7 +115,7 @@ const SettingsPage: React.FC = () => {
                   value={localSettings.thingSpeakReadKey}
                   onChange={e => setLocalSettings(prev => ({ ...prev, thingSpeakReadKey: e.target.value }))}
                   placeholder="••••••••"
-                  className="w-full glass rounded-2xl pl-12 pr-6 py-4 outline-none focus:border-emerald-500 transition-all text-white bg-transparent"
+                  className="w-full glass rounded-2xl pl-12 pr-6 py-4 outline-none focus:border-emerald-500 transition-all text-[var(--text-primary)] bg-transparent"
                 />
               </div>
             </div>
@@ -126,7 +127,7 @@ const SettingsPage: React.FC = () => {
         <h3 className="text-sm font-black uppercase tracking-widest text-zinc-600 mb-4 flex items-center gap-2">
           <Shield size={16} /> Safety Thresholds
         </h3>
-        <div className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-10">
+        <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-3xl p-8 space-y-10">
           <ThresholdSlider 
             label="Warning Level" 
             desc="Alert app at this PPM" 
@@ -173,7 +174,7 @@ const ThresholdSlider = ({ label, desc, value, max, color, onChange }: { label: 
             <Shield size={16} />
           </div>
           <div>
-            <h4 className="font-bold text-white">{label}</h4>
+            <h4 className="font-bold text-[var(--text-primary)]">{label}</h4>
             <p className="text-xs text-zinc-500">{desc}</p>
           </div>
         </div>
@@ -182,19 +183,19 @@ const ThresholdSlider = ({ label, desc, value, max, color, onChange }: { label: 
       <input 
         type="range" min="300" max={max} step="50" value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className={`w-full ${theme.accent} h-2 bg-white/10 rounded-lg appearance-none cursor-pointer`}
+        className={`w-full ${theme.accent} h-2 bg-[var(--border-primary)] rounded-lg appearance-none cursor-pointer`}
       />
     </div>
   );
 };
 
 const ToggleCard = ({ icon: Icon, title, desc, active, onClick }: any) => (
-  <div onClick={onClick} className="bg-white/5 border border-white/10 rounded-[32px] p-6 flex items-center justify-between cursor-pointer hover:bg-white/10 transition-colors">
+  <div onClick={onClick} className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-[32px] p-6 flex items-center justify-between cursor-pointer hover:bg-[var(--border-primary)] transition-colors">
     <div className="flex items-center gap-4">
-      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-zinc-600'}`}>
+      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-[var(--border-primary)] text-zinc-600'}`}>
         <Icon size={20} />
       </div>
-      <div><h4 className="font-bold text-sm">{title}</h4><p className="text-xs text-zinc-500">{desc}</p></div>
+      <div><h4 className="font-bold text-sm text-[var(--text-primary)]">{title}</h4><p className="text-xs text-zinc-500">{desc}</p></div>
     </div>
     <div className={`w-12 h-6 rounded-full relative transition-colors ${active ? 'bg-emerald-500' : 'bg-zinc-800'}`}>
       <motion.div animate={{ x: active ? 24 : 4 }} className="absolute top-1 left-0 w-4 h-4 bg-white rounded-full shadow-lg" />

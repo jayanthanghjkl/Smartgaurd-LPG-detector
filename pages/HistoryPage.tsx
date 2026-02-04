@@ -115,13 +115,13 @@ const HistoryPage: React.FC = () => {
           <button 
             onClick={handleExport}
             disabled={!data.length}
-            className="flex items-center gap-2 glass px-5 py-2.5 rounded-2xl text-xs font-bold hover:bg-white/10 transition-all border-white/5 disabled:opacity-30"
+            className="flex items-center gap-2 glass px-5 py-2.5 rounded-2xl text-xs font-bold hover:bg-[var(--border-primary)] transition-all border-[var(--border-primary)] disabled:opacity-30"
           >
             Export CSV
           </button>
-          <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-[var(--border-primary)] self-start md:self-auto">
+          <div className="flex items-center gap-1 bg-[var(--bg-secondary)] p-1 rounded-2xl border border-[var(--border-primary)] self-start md:self-auto">
             {['1H', '24H', '7D'].map(r => (
-              <button key={r} onClick={() => setRange(r)} className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${range === r ? 'bg-emerald-500 text-black shadow-lg' : 'text-zinc-500 hover:text-white'}`}>
+              <button key={r} onClick={() => setRange(r)} className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${range === r ? 'bg-emerald-500 text-black shadow-lg' : 'text-zinc-500 hover:text-[var(--text-primary)]'}`}>
                 {r}
               </button>
             ))}
@@ -151,11 +151,11 @@ const HistoryPage: React.FC = () => {
                       <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
                   <XAxis dataKey="time" stroke="#525252" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis stroke="#525252" fontSize={10} tickLine={false} axisLine={false} />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: 'rgba(5,5,5,0.9)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)' }}
+                    contentStyle={{ backgroundColor: 'var(--bg-primary)', borderRadius: '24px', border: '1px solid var(--border-primary)', backdropFilter: 'blur(10px)', color: 'var(--text-primary)' }}
                     itemStyle={{ color: '#10B981', fontWeight: 'bold' }}
                   />
                   <Area type="monotone" dataKey="ppm" stroke="#10B981" strokeWidth={4} fill="url(#colorPpm)" animationDuration={1000} />
@@ -167,7 +167,7 @@ const HistoryPage: React.FC = () => {
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
-             <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
+             <div className="w-16 h-16 bg-[var(--bg-secondary)] rounded-full flex items-center justify-center text-zinc-700">
                <ChartArea size={32} />
              </div>
              <div>
@@ -188,9 +188,9 @@ const HistoryPage: React.FC = () => {
 };
 
 const MetricBox = ({ label, value, sub }: any) => (
-  <div className="glass p-6 rounded-3xl space-y-2 border-white/5">
+  <div className="glass p-6 rounded-3xl space-y-2 border-[var(--border-primary)]">
     <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{label}</p>
-    <h3 className="text-3xl font-black">{value}</h3>
+    <h3 className="text-3xl font-black text-[var(--text-primary)]">{value}</h3>
     <p className="text-xs text-emerald-500/80 font-medium">{sub}</p>
   </div>
 );
