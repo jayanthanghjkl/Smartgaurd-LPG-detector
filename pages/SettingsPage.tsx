@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 // Fixing framer-motion type errors by using any cast
 import * as FramerMotion from 'framer-motion';
 const { motion } = FramerMotion as any;
-import { Bell, Shield, Phone, Cpu, Save, Bluetooth, Zap, Cloud, Key, Activity, Info } from 'lucide-react';
+import { Bell, Shield, Phone, Cpu, Save, Bluetooth, Zap, Cloud, Key, Activity, Info, Database } from 'lucide-react';
 import { useSafety } from '../context/SafetyContext';
 
 const SettingsPage: React.FC = () => {
@@ -13,15 +12,11 @@ const SettingsPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = () => {
-    if (localSettings.thingSpeakChannelId === '0' || !localSettings.thingSpeakChannelId) {
-      showToast('Please provide a valid Channel ID', 'error');
-      return;
-    }
     setIsSaving(true);
     updateSettings(localSettings);
     setTimeout(() => {
       setIsSaving(false);
-      showToast('System settings synchronized successfully.');
+      showToast('System configuration saved.');
     }, 800);
   };
 
@@ -39,7 +34,7 @@ const SettingsPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-black tracking-tight mb-1">System Console</h2>
-          <p className="text-zinc-500 font-medium">Production-grade safety protocols & IoT cloud link.</p>
+          <p className="text-zinc-500 font-medium">Configure production-grade safety & IoT persistence.</p>
         </div>
         <motion.button 
           onClick={handleSave}
@@ -53,13 +48,48 @@ const SettingsPage: React.FC = () => {
           ) : (
             <Save size={18} />
           )}
-          {isSaving ? 'Syncing...' : 'Save Changes'}
+          {isSaving ? 'Saving...' : 'Save Settings'}
         </motion.button>
       </div>
 
       <section className="space-y-6">
         <h3 className="text-sm font-black uppercase tracking-widest text-zinc-600 mb-4 flex items-center gap-2">
-          <Cloud size={16} /> Cloud Integration (ThingSpeak)
+          <Database size={16} /> Supabase Integration (Real-time Cloud)
+        </h3>
+        <div className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">Project URL</label>
+              <div className="relative">
+                <Cloud size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                <input 
+                  value={localSettings.supabaseUrl}
+                  onChange={e => setLocalSettings(prev => ({ ...prev, supabaseUrl: e.target.value }))}
+                  placeholder="https://xyz.supabase.co"
+                  className="w-full glass rounded-2xl pl-12 pr-6 py-4 outline-none focus:border-emerald-500 transition-all text-white bg-transparent"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">Anon API Key</label>
+              <div className="relative">
+                <Key size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                <input 
+                  type="password"
+                  value={localSettings.supabaseKey}
+                  onChange={e => setLocalSettings(prev => ({ ...prev, supabaseKey: e.target.value }))}
+                  placeholder="••••••••••••••••"
+                  className="w-full glass rounded-2xl pl-12 pr-6 py-4 outline-none focus:border-emerald-500 transition-all text-white bg-transparent"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-6">
+        <h3 className="text-sm font-black uppercase tracking-widest text-zinc-600 mb-4 flex items-center gap-2">
+          <Cloud size={16} /> Legacy Support (ThingSpeak)
         </h3>
         <div className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -71,29 +101,23 @@ const SettingsPage: React.FC = () => {
                   value={localSettings.thingSpeakChannelId}
                   onChange={e => setLocalSettings(prev => ({ ...prev, thingSpeakChannelId: e.target.value }))}
                   placeholder="e.g. 2347141"
-                  className={`w-full glass rounded-2xl pl-12 pr-6 py-4 outline-none transition-all text-white bg-transparent ${localSettings.thingSpeakChannelId === '0' ? 'border-rose-500/50' : 'focus:border-emerald-500'}`}
+                  className="w-full glass rounded-2xl pl-12 pr-6 py-4 outline-none focus:border-emerald-500 transition-all text-white bg-transparent"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">Read API Key (Optional)</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">Read Key</label>
               <div className="relative">
                 <Key size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500" />
                 <input 
                   type="password"
                   value={localSettings.thingSpeakReadKey}
                   onChange={e => setLocalSettings(prev => ({ ...prev, thingSpeakReadKey: e.target.value }))}
-                  placeholder="••••••••••••••••"
+                  placeholder="••••••••"
                   className="w-full glass rounded-2xl pl-12 pr-6 py-4 outline-none focus:border-emerald-500 transition-all text-white bg-transparent"
                 />
               </div>
             </div>
-          </div>
-          <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl flex gap-3 items-start">
-            <Info size={16} className="text-blue-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              Find your <span className="text-white font-bold">Channel ID</span> in your ThingSpeak account under <b>Channel Settings</b>. Ensure your channel is either <b>Public</b> or you provide the <b>Read API Key</b>.
-            </p>
           </div>
         </div>
       </section>
@@ -137,20 +161,10 @@ const SettingsPage: React.FC = () => {
 
 const ThresholdSlider = ({ label, desc, value, max, color, onChange }: { label: string, desc: string, value: number, max: number, color: 'amber' | 'rose', onChange: (v: number) => void }) => {
   const themes = {
-    amber: {
-      bg: 'bg-amber-500/20',
-      text: 'text-amber-400',
-      accent: 'accent-amber-500'
-    },
-    rose: {
-      bg: 'bg-rose-500/20',
-      text: 'text-rose-400',
-      accent: 'accent-rose-500'
-    }
+    amber: { bg: 'bg-amber-500/20', text: 'text-amber-400', accent: 'accent-amber-500' },
+    rose: { bg: 'bg-rose-500/20', text: 'text-rose-400', accent: 'accent-rose-500' }
   };
-
   const theme = themes[color];
-
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-end">

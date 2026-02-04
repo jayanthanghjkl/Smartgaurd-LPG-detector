@@ -1,121 +1,135 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ConnectionType, ConnectionStatus, Status } from '../types';
+import { ConnectionType, ConnectionStatus, DataSource } from '../types';
 
-const THINGSPEAK_POLL_INTERVAL = 15000; // ThingSpeak free tier rate limit
-const DEMO_POLL_INTERVAL = 1500; // Fast feedback for demo mode
+const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
 
 export const useHybridConnection = (
-  forceDemo: boolean, 
-  channelId: string, 
-  readKey: string,
-  warningThreshold: number,
-  dangerThreshold: number
+  settings: any,
+  onBluetoothPacket: (packet: string) => void,
+  onCloudData: (data: any) => void
 ) => {
-  // Initialize with 0 to ensure display starts empty before source verification
-  const [gasPPM, setGasPPM] = useState<number>(0);
-  const [temperature, setTemperature] = useState<number>(0);
-  const [humidity, setHumidity] = useState<number>(0);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [connectionType, setConnectionType] = useState<ConnectionType>(forceDemo ? ConnectionType.DEMO : ConnectionType.WIFI);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(ConnectionStatus.DISCONNECTED);
+  const [connectionType, setConnectionType] = useState<ConnectionType>(settings.demoMode ? ConnectionType.DEMO : ConnectionType.OFFLINE);
+  
+  const deviceRef = useRef<any>(null);
+  const characteristicRef = useRef<any>(null);
+  const cloudPollingInterval = useRef<any>(null);
 
-  // Derived status calculation using dynamic thresholds
-  const getStatus = useCallback((ppm: number): Status => {
-    if (ppm >= dangerThreshold) return 'danger';
-    if (ppm >= warningThreshold) return 'warning';
-    return 'safe';
-  }, [warningThreshold, dangerThreshold]);
+  // --- Bluetooth Logic ---
+  const handleCharacteristicValueChange = (event: any) => {
+    const value = new TextDecoder().decode(event.target.value);
+    onBluetoothPacket(value);
+  };
 
-  // Sync state when mode changes externally
-  useEffect(() => {
-    const newType = forceDemo ? ConnectionType.DEMO : ConnectionType.WIFI;
-    setConnectionType(newType);
-    
-    // Purge simulated data when switching to real cloud link
-    if (newType === ConnectionType.WIFI) {
-      setGasPPM(0);
-      setTemperature(0);
-      setHumidity(0);
-      setLastUpdated(null);
-      setConnectionStatus(ConnectionStatus.CONNECTING);
+  const scanAndConnect = async () => {
+    if (!(navigator as any).bluetooth) {
+      throw new Error("Web Bluetooth is not supported in this environment.");
     }
-  }, [forceDemo]);
 
-  useEffect(() => {
-    if (connectionType === ConnectionType.OFFLINE) {
+    try {
+      setConnectionStatus(ConnectionStatus.CONNECTING);
+      
+      const device = await (navigator as any).bluetooth.requestDevice({
+        filters: [{ services: [SERVICE_UUID] }],
+        optionalServices: ['battery_service']
+      });
+
+      deviceRef.current = device;
+      const server = await device.gatt?.connect();
+      const service = await server?.getPrimaryService(SERVICE_UUID);
+      const characteristic = await service?.getCharacteristic(CHARACTERISTIC_UUID);
+
+      if (characteristic) {
+        characteristicRef.current = characteristic;
+        await characteristic.startNotifications();
+        characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicValueChange);
+        
+        setConnectionStatus(ConnectionStatus.CONNECTED);
+        setConnectionType(ConnectionType.BLUETOOTH);
+        
+        device.addEventListener('gattserverdisconnected', () => {
+          setConnectionStatus(ConnectionStatus.DISCONNECTED);
+          setConnectionType(ConnectionType.OFFLINE);
+          characteristicRef.current = null;
+          deviceRef.current = null;
+        });
+      }
+    } catch (error: any) {
+      // Handle "User cancelled requestDevice()" or other common errors
       setConnectionStatus(ConnectionStatus.DISCONNECTED);
+      if (error.name === 'NotFoundError') {
+        throw new Error("Selection cancelled. No device linked.");
+      } else if (error.name === 'SecurityError') {
+        throw new Error("Bluetooth permission denied.");
+      }
+      throw error;
+    }
+  };
+
+  const disconnectDevice = () => {
+    if (deviceRef.current?.gatt?.connected) {
+      deviceRef.current.gatt.disconnect();
+    }
+  };
+
+  // --- Cloud Polling Logic (ThingSpeak) ---
+  useEffect(() => {
+    if (settings.demoMode) {
+      if (cloudPollingInterval.current) clearInterval(cloudPollingInterval.current);
       return;
     }
 
-    const fetchData = async () => {
-      // --- MODE: VIRTUAL SIMULATOR ---
-      if (connectionType === ConnectionType.DEMO) {
-        // Randomly simulate PPM that occasionally crosses thresholds for testing
-        const basePPM = 400 + Math.random() * 200;
-        const spikeChance = Math.random();
-        const finalPPM = spikeChance > 0.9 ? dangerThreshold + 200 : spikeChance > 0.7 ? warningThreshold + 100 : basePPM;
-        
-        setGasPPM(Math.round(finalPPM));
-        setTemperature(22.5 + (Math.random() - 0.5) * 5);
-        setHumidity(48 + (Math.random() - 0.5) * 12);
-        setLastUpdated(new Date());
-        setConnectionStatus(ConnectionStatus.CONNECTED);
-        return;
-      }
-
-      // --- MODE: REAL THINGSPEAK CLOUD ---
-      if (!channelId || channelId === '0' || channelId.trim() === '') {
-        setConnectionStatus(ConnectionStatus.DISCONNECTED);
-        return;
-      }
-
-      const keyParam = readKey ? `&api_key=${readKey}` : '';
-      const url = `https://api.thingspeak.com/channels/${channelId}/feeds/last.json?${keyParam}`;
-
+    const pollThingSpeak = async () => {
+      if (!settings.thingSpeakChannelId || settings.thingSpeakChannelId === '0') return;
+      
       try {
-        setConnectionStatus(prev => prev === ConnectionStatus.CONNECTED ? prev : ConnectionStatus.CONNECTING);
-        const res = await fetch(url);
+        const url = `https://api.thingspeak.com/channels/${settings.thingSpeakChannelId}/feeds/last.json?api_key=${settings.thingSpeakReadKey}`;
+        const response = await fetch(url);
+        const data = await response.json();
         
-        if (!res.ok) throw new Error(`Link Error: ${res.status}`);
-
-        const data = await res.json();
-
-        // field1 is typically mapped to PPM in SmartGuard firmware
         if (data && data.created_at) {
-          const ppmValue = Math.round(parseFloat(data.field1 || '0'));
-          const tempValue = parseFloat(parseFloat(data.field2 || '0').toFixed(1));
-          const humValue = Math.round(parseFloat(data.field3 || '0'));
-
-          setGasPPM(isNaN(ppmValue) ? 0 : ppmValue);
-          setTemperature(isNaN(tempValue) ? 0 : tempValue);
-          setHumidity(isNaN(humValue) ? 0 : humValue);
-          setLastUpdated(new Date(data.created_at));
-          setConnectionStatus(ConnectionStatus.CONNECTED);
-        } else {
-          // Channel exists but has no data entries
-          setConnectionStatus(ConnectionStatus.DISCONNECTED);
+          onCloudData({
+            ppm: parseFloat(data.field1 || '0'),
+            temp: parseFloat(data.field2 || '24'),
+            hum: parseFloat(data.field3 || '50'),
+            timestamp: new Date(data.created_at)
+          });
         }
-      } catch (e: any) {
-        console.error('Safety Link Failed:', e.message);
-        setConnectionStatus(ConnectionStatus.ERROR);
+      } catch (e) {
+        console.error("Cloud Polling Error:", e);
       }
     };
 
-    fetchData();
-    const interval = setInterval(fetchData, connectionType === ConnectionType.DEMO ? DEMO_POLL_INTERVAL : THINGSPEAK_POLL_INTERVAL);
-    return () => clearInterval(interval);
-  }, [connectionType, channelId, readKey, warningThreshold, dangerThreshold]);
+    // Initial poll
+    pollThingSpeak();
+    
+    // Set interval for every 15s (ThingSpeak rate limit)
+    cloudPollingInterval.current = setInterval(pollThingSpeak, 15000);
+
+    return () => {
+      if (cloudPollingInterval.current) clearInterval(cloudPollingInterval.current);
+    };
+  }, [settings.demoMode, settings.thingSpeakChannelId, settings.thingSpeakReadKey, onCloudData]);
+
+  // Handle Demo Mode switch
+  useEffect(() => {
+    if (settings.demoMode) {
+      setConnectionType(ConnectionType.DEMO);
+      setConnectionStatus(ConnectionStatus.CONNECTED);
+    } else {
+      if (connectionType === ConnectionType.DEMO) {
+        setConnectionType(ConnectionType.OFFLINE);
+        setConnectionStatus(ConnectionStatus.DISCONNECTED);
+      }
+    }
+  }, [settings.demoMode]);
 
   return {
-    gasPPM,
-    temperature,
-    humidity,
-    lastUpdated,
     connectionType,
     connectionStatus,
-    status: getStatus(gasPPM),
-    connectBluetooth: async () => { console.debug("BLE Pairing - Feature Not Active"); }, 
-    disconnectBluetooth: () => { setConnectionStatus(ConnectionStatus.DISCONNECTED); },
+    scanAndConnect,
+    disconnectDevice
   };
 };

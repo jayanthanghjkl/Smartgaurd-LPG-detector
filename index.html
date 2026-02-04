@@ -12,7 +12,8 @@
         "react-router-dom": "https://esm.sh/react-router-dom@^7.13.0",
         "framer-motion": "https://esm.sh/framer-motion@^12.29.2",
         "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
-        "recharts": "https://esm.sh/recharts@^3.7.0"
+        "recharts": "https://esm.sh/recharts@^3.7.0",
+        "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.49.1"
       }
     }
     </script>
@@ -84,6 +85,15 @@
 
       .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
       .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--border-primary); border-radius: 10px; }
+      
+      /* Liquid animation enhancements */
+      @keyframes wave-flow {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
+      }
+      .liquid-wave {
+        animation: wave-flow 4s linear infinite;
+      }
     </style>
     
     <!-- Entry point -->

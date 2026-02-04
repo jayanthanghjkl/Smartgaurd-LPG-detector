@@ -1,6 +1,8 @@
 
 export type Status = 'safe' | 'warning' | 'danger';
 export type Theme = 'light' | 'dark';
+export type MeshRole = 'GATEWAY' | 'NODE';
+export type DataSource = 'CLOUD' | 'LOCAL_MESH' | 'DEMO';
 
 export enum ConnectionType {
   BLUETOOTH = 'BLUETOOTH',
@@ -18,17 +20,24 @@ export enum ConnectionStatus {
 
 export interface DeviceNode {
   id: string;
+  deviceId: string;
   name: string;
   location: string;
-  ip?: string;
+  role: MeshRole;
   ppm: number;
   temp: number;
   humidity: number;
   battery: number;
   rssi: number;
   status: Status;
-  connectionType: ConnectionType;
-  connectionStatus: ConnectionStatus;
+  lastSeen: string;
+}
+
+export interface MeshAlert {
+  deviceId: string;
+  location: string;
+  ppm: number;
+  timestamp: Date;
 }
 
 export interface UserSettings {
@@ -42,6 +51,8 @@ export interface UserSettings {
   theme: Theme;
   thingSpeakChannelId: string;
   thingSpeakReadKey: string;
+  supabaseUrl: string;
+  supabaseKey: string;
 }
 
 export interface ToastMessage {
@@ -57,20 +68,20 @@ export interface SafetyState {
   connectionType: ConnectionType;
   connectionStatus: ConnectionStatus;
   status: Status;
+  dataSource: DataSource;
   nodes: DeviceNode[];
+  activeAlert: MeshAlert | null;
   settings: UserSettings;
   toasts: ToastMessage[];
   isAuthenticated: boolean;
   lastUpdated: Date | null;
-  selectedNodeId: string;
-  setSelectedNodeId: (id: string) => void;
   setAuthenticated: (val: boolean) => void;
   toggleTheme: () => void;
-  connectBluetooth: () => Promise<void>;
-  disconnectBluetooth: () => void;
-  addNode: (node: Partial<DeviceNode>) => void;
+  scanAndConnect: () => Promise<void>;
+  disconnectDevice: () => void;
+  updateNode: (id: string, data: Partial<DeviceNode>) => void;
   removeNode: (id: string) => void;
-  updateNode: (id: string, updates: Partial<DeviceNode>) => void;
   updateSettings: (settings: Partial<UserSettings>) => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  clearAlert: () => void;
 }

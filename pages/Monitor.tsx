@@ -1,207 +1,139 @@
 
 import React from 'react';
-// Fixing framer-motion type errors by using any cast
 import * as FramerMotion from 'framer-motion';
 const { motion, AnimatePresence } = FramerMotion as any;
 import { 
-  Thermometer, Droplets, Wind, Activity, Bluetooth, 
-  Wifi, Radio, Cloud, ShieldCheck, Clock, AlertCircle, 
-  Database, Cpu, Layers 
+  Thermometer, Droplets, Clock, Building2, Radio,
+  ShieldAlert, ShieldCheck, AlertCircle, Signal, Cloud
 } from 'lucide-react';
 import LiquidGauge from '../components/LiquidGauge';
 import DynamicIsland from '../components/DynamicIsland';
 import { useSafety } from '../context/SafetyContext';
-import { ConnectionType, ConnectionStatus } from '../types';
+import { ConnectionStatus } from '../types';
 
 const Monitor: React.FC = () => {
   const { 
-    gasPPM: gatewayPPM, 
-    temperature: gatewayTemp, 
-    humidity: gatewayHum, 
-    status: gatewayStatus, 
-    connectionType: gatewayType, 
-    connectionStatus: gatewayConnStatus,
-    settings,
-    lastUpdated: gatewayLastUpdated,
-    nodes,
-    selectedNodeId,
-    setSelectedNodeId
+    gasPPM, temperature, humidity, status,
+    dataSource, activeAlert, clearAlert,
+    lastUpdated, connectionStatus
   } = useSafety();
-
-  // Determine current active data
-  const isGatewaySelected = selectedNodeId === 'gateway';
-  const selectedNode = nodes.find(n => n.id === selectedNodeId);
-
-  const activePPM = isGatewaySelected ? gatewayPPM : (selectedNode?.ppm ?? 0);
-  const activeTemp = isGatewaySelected ? gatewayTemp : (selectedNode?.temp ?? 0);
-  const activeHum = isGatewaySelected ? gatewayHum : (selectedNode?.humidity ?? 0);
-  const activeStatus = isGatewaySelected ? gatewayStatus : (selectedNode?.status ?? 'safe');
-  const activeConnStatus = isGatewaySelected ? gatewayConnStatus : (selectedNode?.connectionStatus ?? ConnectionStatus.DISCONNECTED);
-  const activeType = isGatewaySelected ? gatewayType : (selectedNode?.connectionType ?? ConnectionType.WIFI);
   
-  const isDemo = gatewayType === ConnectionType.DEMO && isGatewaySelected;
-  
-  /**
-   * NORMALIZED PPM TO PERCENTAGE
-   * 0 PPM = 0%
-   * 5000 PPM = 100%
-   */
   const MAX_PPM = 5000;
-  const ppmPercentage = Math.min(100, (activePPM / MAX_PPM) * 100);
+  const ppmPercentage = Math.min(100, (gasPPM / MAX_PPM) * 100);
+
+  const formattedTime = lastUpdated?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
   return (
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="p-6 md:p-10 flex flex-col min-h-full bg-transparent"
+      className="p-6 md:p-10 flex flex-col min-h-full w-full max-w-7xl mx-auto"
     >
-      <DynamicIsland status={activeStatus} />
+      <DynamicIsland status={status} />
 
-      {/* Device Selector */}
-      <div className="mt-8 flex justify-center w-full">
-        <div className="glass p-1 rounded-2xl flex items-center gap-1 overflow-x-auto max-w-full custom-scrollbar scroll-smooth whitespace-nowrap px-1">
-          <button
-            onClick={() => setSelectedNodeId('gateway')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              isGatewaySelected 
-                ? 'bg-emerald-500 text-black shadow-lg scale-105' 
-                : 'text-zinc-500 hover:text-[var(--text-primary)] hover:bg-white/5'
-            }`}
+      {/* Emergency Mesh Banner */}
+      <AnimatePresence>
+        {activeAlert && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="mb-6 overflow-hidden"
           >
-            {gatewayType === ConnectionType.DEMO ? <Activity size={14} /> : <Cloud size={14} />}
-            Primary Gateway
-          </button>
+            <div className="bg-rose-600 p-6 rounded-[32px] border border-rose-400/50 shadow-2xl shadow-rose-950/40 text-white flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-5">
+                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center animate-pulse">
+                  <ShieldAlert size={32} />
+                </div>
+                <div>
+                  <h4 className="text-xl font-black uppercase tracking-tight">Mesh Emergency Detected</h4>
+                  <p className="font-bold text-rose-100 opacity-90">Leak reported in {activeAlert.location}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-right hidden md:block">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-rose-200">Local Mesh Stream</p>
+                  <p className="text-2xl font-black">{Math.round(activeAlert.ppm)} PPM</p>
+                </div>
+                <button 
+                  onClick={clearAlert}
+                  className="bg-white text-rose-600 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+                >
+                  Silence Alert
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="mt-4 flex flex-col items-center gap-4">
+        <div className="flex flex-wrap justify-center gap-3">
+          <div className="px-4 py-1.5 glass border border-[var(--border-primary)] rounded-full flex items-center gap-2">
+            <Building2 size={12} className="text-zinc-400" />
+            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--text-primary)]">Unit: Main Gateway</span>
+          </div>
           
-          {nodes.map(node => (
-            <button
-              key={node.id}
-              onClick={() => setSelectedNodeId(node.id)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                selectedNodeId === node.id 
-                  ? 'bg-emerald-500 text-black shadow-lg scale-105' 
-                  : 'text-zinc-500 hover:text-[var(--text-primary)] hover:bg-white/5'
-              }`}
-            >
-              <Cpu size={14} />
-              {node.name}
-            </button>
-          ))}
+          <div className={`px-4 py-1.5 rounded-full border flex items-center gap-2 transition-all ${
+            dataSource === 'CLOUD' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : 
+            dataSource === 'LOCAL_MESH' ? 'bg-rose-500/10 border-rose-500/20 text-rose-400' :
+            'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+          }`}>
+            {dataSource === 'CLOUD' ? <Cloud size={12} /> : dataSource === 'LOCAL_MESH' ? <Signal size={12} /> : <Radio size={12} />}
+            <span className="text-[9px] font-black uppercase tracking-widest">
+              {dataSource === 'CLOUD' ? 'Cloud Monitoring' : dataSource === 'LOCAL_MESH' ? 'Local Emergency Channel' : 'Simulation Engine'}
+            </span>
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center py-10">
+      <div className="flex-1 flex flex-col items-center justify-center py-6">
         <div className="relative w-full max-w-sm flex justify-center">
           <LiquidGauge 
             percentage={ppmPercentage} 
-            status={activeStatus} 
-            value={activePPM}
-            connectionStatus={activeConnStatus}
+            status={status} 
+            value={gasPPM}
+            connectionStatus={connectionStatus}
           />
-          
-          {activeConnStatus === ConnectionStatus.CONNECTED && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.5, x: 20 }}
-              animate={{ opacity: 1, scale: 1, x: 0 }}
-              
-            >
-             
-            </motion.div>
-          )}
         </div>
         
         <div className="mt-6 flex flex-col items-center">
-          <motion.div 
-            layout
-            className={`flex items-center gap-3 px-6 py-2.5 rounded-full border transition-all duration-700 ${
-              activeConnStatus === ConnectionStatus.CONNECTED ? 
-                (isDemo ? 'bg-blue-500/10 border-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.1)]' : 'bg-emerald-500/10 border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.15)]') : 
-              activeConnStatus === ConnectionStatus.CONNECTING ? 'bg-blue-500/10 border-blue-500/20 animate-pulse' : 
-              'bg-rose-500/10 border-rose-500/20 shadow-[0_0_20px_rgba(244,63,94,0.1)]'
-            }`}
-          >
-            {isGatewaySelected ? (
-              isDemo ? <Activity size={16} className="text-blue-400" /> : (gatewayType === ConnectionType.WIFI ? <Cloud size={16} className="text-emerald-400" /> : <Radio size={16} className="text-amber-400" />)
+          <div className="mt-4">
+            {formattedTime ? (
+              <div className="flex items-center gap-1.5 text-[9px] font-bold text-[var(--text-secondary)] uppercase tracking-widest bg-[var(--bg-secondary)] px-3 py-1 rounded-full border border-[var(--border-primary)]">
+                <Clock size={10} /> Last Data Sync: {formattedTime}
+              </div>
             ) : (
-              <Layers size={16} className="text-emerald-400" />
-            )}
-            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-primary)]">
-              {isGatewaySelected 
-                ? (settings.thingSpeakChannelId && settings.thingSpeakChannelId !== '0' ? `ThingSpeak ID: ${settings.thingSpeakChannelId}` : 'No Cloud Link')
-                : `Node: ${selectedNode?.name}`
-              } • {activeConnStatus}
-            </span>
-          </motion.div>
-          
-          <div className="mt-4 flex flex-col items-center gap-2">
-            {isGatewaySelected && gatewayLastUpdated && (
-              <div className="flex items-center gap-1.5 text-[9px] font-bold text-[var(--text-secondary)] uppercase tracking-widest bg-[var(--bg-secondary)] px-3 py-1 rounded-full border border-[var(--border-primary)] backdrop-blur-md shadow-sm">
-                <Clock size={10} />
-                {isDemo ? 'Last Sim Update: ' : 'ThingSpeak Sync: '} {gatewayLastUpdated.toLocaleTimeString()}
-              </div>
-            )}
-            {!isGatewaySelected && (
-              <div className="flex items-center gap-1.5 text-[9px] font-bold text-[var(--text-secondary)] uppercase tracking-widest bg-[var(--bg-secondary)] px-3 py-1 rounded-full border border-[var(--border-primary)] backdrop-blur-md shadow-sm">
-                <Database size={10} />
-                Viewing Hardware Cache: {selectedNode?.location}
-              </div>
-            )}
-            {settings.demoMode && isGatewaySelected && (
-              <div className="text-blue-500/80 text-[10px] font-black uppercase tracking-widest bg-blue-500/5 px-6 py-2 rounded-xl border border-blue-500/20 shadow-sm">
-                Developer Simulation Mode Active
+              <div className="text-[9px] font-black text-zinc-500 uppercase tracking-widest opacity-40">
+                Awaiting Initial Packet
               </div>
             )}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-auto max-w-5xl mx-auto w-full pb-10">
-        <StatCard 
-          icon={Thermometer} 
-          label="Atmosphere" 
-          value={activeConnStatus === ConnectionStatus.CONNECTED ? `${activeTemp.toFixed(1)}°C` : '--'} 
-          color="text-orange-400"
-          trend={isDemo ? "Simulated Thermal Data" : "Sensor Equilibrium"}
-        />
-        <StatCard 
-          icon={Droplets} 
-          label="Humidity" 
-          value={activeConnStatus === ConnectionStatus.CONNECTED ? `${Math.round(activeHum)}%` : '--'} 
-          color="text-blue-400"
-          trend={isDemo ? "Simulated Vapor Data" : "Hygrometric State"}
-        />
-        <StatCard 
-          icon={isDemo ? Activity : Wind} 
-          label="Safety Audit" 
-          value={activeConnStatus === ConnectionStatus.CONNECTED ? (activeStatus === 'safe' ? 'Verified' : activeStatus === 'warning' ? 'Warning' : 'Danger') : 'Link Offline'} 
-          color={activeConnStatus === ConnectionStatus.CONNECTED ? (activeStatus === 'safe' ? 'text-emerald-400' : 'text-rose-400') : 'text-zinc-500'}
-          trend={isDemo ? "Virtual Environment" : "Cloud Synchronized"}
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 w-full pb-10">
+        <StatCard icon={Thermometer} label="Temperature" value={gasPPM > 0 ? `${temperature.toFixed(1)}°C` : '--'} color="text-orange-400" />
+        <StatCard icon={Droplets} label="Humidity" value={gasPPM > 0 ? `${Math.round(humidity)}%` : '--'} color="text-blue-400" />
+        <StatCard icon={ShieldCheck} label="Mesh Status" value={status.toUpperCase()} color={status === 'safe' ? 'text-emerald-400' : status === 'warning' ? 'text-amber-400' : 'text-rose-400'} />
       </div>
     </motion.div>
   );
 };
 
-const StatCard = ({ icon: Icon, label, value, color, trend }: any) => (
-  <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-[32px] p-6 shadow-xl hover:shadow-2xl transition-all duration-500 group relative overflow-hidden">
-    <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
-       <Icon size={64} />
+const StatCard = ({ icon: Icon, label, value, color }: any) => (
+  <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-[32px] p-6 shadow-xl relative overflow-hidden group">
+    <div className="absolute top-0 right-0 p-4 opacity-[0.05] text-[var(--text-primary)]">
+       <Icon size={48} />
     </div>
-    <div className="flex items-start justify-between mb-4">
-      <div className={`p-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-primary)] ${color} shadow-sm`}>
-        <Icon size={22} />
-      </div>
-      <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-[var(--text-secondary)] bg-[var(--bg-primary)] px-2 py-1 rounded-lg border border-[var(--border-primary)]">
-        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-        Verified
+    <div className="flex items-start justify-between mb-2">
+      <div className={`p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-primary)] ${color}`}>
+        <Icon size={18} />
       </div>
     </div>
-    <div className="space-y-0.5 relative z-10">
-      <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest opacity-60">{label}</p>
-      <h3 className="text-3xl font-black tracking-tighter text-[var(--text-primary)] transition-colors">{value}</h3>
-    </div>
-    <div className="mt-4 pt-4 border-t border-[var(--border-primary)] relative z-10">
-      <p className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-widest group-hover:text-[var(--text-primary)] transition-colors">{trend}</p>
+    <div className="space-y-0.5">
+      <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest">{label}</p>
+      <h3 className="text-2xl font-black text-[var(--text-primary)]">{value}</h3>
     </div>
   </div>
 );

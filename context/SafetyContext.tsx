@@ -1,37 +1,37 @@
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useRef, useCallback } from 'react';
 import { useHybridConnection } from '../hooks/useHybridConnection';
+import { getSupabaseClient } from '../lib/supabase';
 import { 
   SafetyState, 
   DeviceNode, 
   ConnectionType, 
   ConnectionStatus, 
   UserSettings,
-  ToastMessage
+  ToastMessage,
+  Status,
+  MeshAlert,
+  DataSource
 } from '../types';
 
 const SafetyContext = createContext<SafetyState | undefined>(undefined);
 
-const STORAGE_KEY_NODES = 'smartguard_nodes';
-const STORAGE_KEY_SETTINGS = 'smartguard_settings';
-const STORAGE_KEY_AUTH = 'smartguard_auth';
-
-const DEFAULT_NODES: DeviceNode[] = [
-  { id: '1', name: 'Factory Floor A', location: 'Main Bay', ppm: 420, temp: 24.5, humidity: 45, battery: 85, rssi: -65, status: 'safe', connectionType: ConnectionType.WIFI, connectionStatus: ConnectionStatus.CONNECTED },
-  { id: '2', name: 'Storage Unit 4', location: 'External Yard', ppm: 380, temp: 21.0, humidity: 50, battery: 92, rssi: -40, status: 'safe', connectionType: ConnectionType.WIFI, connectionStatus: ConnectionStatus.CONNECTED }
-];
+const STORAGE_KEY_SETTINGS = 'smartguard_hybrid_settings';
+const STORAGE_KEY_AUTH = 'smartguard_hybrid_auth';
 
 const DEFAULT_SETTINGS: UserSettings = {
-  warningThreshold: 1000,
-  dangerThreshold: 2500,
+  warningThreshold: 800,
+  dangerThreshold: 2000,
   notificationsEnabled: true,
   autoPurge: false,
-  demoMode: false,
+  demoMode: true,
   autoConnect: false,
   emergencyContact: '',
   theme: 'dark',
-  thingSpeakChannelId: '0', // Default to 0 to indicate setup required
-  thingSpeakReadKey: ''
+  thingSpeakChannelId: '0',
+  thingSpeakReadKey: '',
+  supabaseUrl: '',
+  supabaseKey: ''
 };
 
 export const SafetyProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -41,88 +41,170 @@ export const SafetyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
   });
 
-  const [selectedNodeId, setSelectedNodeId] = useState<string>('gateway');
-
-  const connection = useHybridConnection(
-    settings.demoMode,
-    settings.thingSpeakChannelId,
-    settings.thingSpeakReadKey,
-    settings.warningThreshold,
-    settings.dangerThreshold
-  );
-  
-  const [nodes, setNodes] = useState<DeviceNode[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY_NODES);
-    return saved ? JSON.parse(saved) : DEFAULT_NODES;
-  });
-
+  const [nodes, setNodes] = useState<DeviceNode[]>([]);
+  const [activeAlert, setActiveAlert] = useState<MeshAlert | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [dataSource, setDataSource] = useState<DataSource>(settings.demoMode ? 'DEMO' : 'CLOUD');
+  
+  // Real-time Gateway State
+  const [gasPPM, setGasPPM] = useState(0);
+  const [temperature, setTemperature] = useState(0);
+  const [humidity, setHumidity] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
+  const supabase = useRef(getSupabaseClient(settings.supabaseUrl, settings.supabaseKey));
+
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
+  }, []);
+
+  // --- Hybrid Data Handlers ---
+
+  // 1. Bluetooth Packet Handler (Emergency & Discovery)
+  const handleBluetoothPacket = useCallback((packet: string) => {
+    // ALERT:deviceId:ppm:location
+    // DATA:deviceId:ppm:temp:hum
+    const parts = packet.split(':');
+    const header = parts[0];
+
+    if (header === 'ALERT') {
+      const alert: MeshAlert = {
+        deviceId: parts[1],
+        ppm: parseFloat(parts[2]),
+        location: parts[3],
+        timestamp: new Date()
+      };
+      setActiveAlert(alert);
+      setDataSource('LOCAL_MESH');
+      
+      // Update nodes list if it's a new node
+      updateNodeListFromPacket(parts[1], alert.ppm, alert.location, 'danger');
+      
+      if (settings.notificationsEnabled && navigator.vibrate) {
+        navigator.vibrate([500, 200, 500, 200, 500]);
+      }
+    } else if (header === 'DATA') {
+      // Discovery / Beacon data
+      updateNodeListFromPacket(parts[1], parseFloat(parts[2]), "Building Mesh", 'safe');
+    }
+  }, [settings.notificationsEnabled]);
+
+  // 2. Cloud Data Handler (Normal Mode)
+  const handleCloudData = useCallback((data: any) => {
+    if (activeAlert) return; // Bluetooth Emergency overrides Cloud display
+    
+    setGasPPM(data.ppm);
+    setTemperature(data.temp);
+    setHumidity(data.hum);
+    setLastUpdated(data.timestamp);
+    setDataSource('CLOUD');
+  }, [activeAlert]);
+
+  const updateNodeListFromPacket = (deviceId: string, ppm: number, location: string, status: Status) => {
+    setNodes(prev => {
+      const idx = prev.findIndex(n => n.deviceId === deviceId);
+      if (idx > -1) {
+        const updated = [...prev];
+        updated[idx] = { ...updated[idx], ppm, status, lastSeen: new Date().toISOString() };
+        return updated;
+      } else {
+        const newNode: DeviceNode = {
+          id: Math.random().toString(36).substr(2, 9),
+          deviceId,
+          name: `Unit ${deviceId.slice(-4)}`,
+          location,
+          role: 'NODE',
+          ppm,
+          temp: 24,
+          humidity: 45,
+          battery: 90,
+          rssi: -70,
+          status,
+          lastSeen: new Date().toISOString()
+        };
+        return [...prev, newNode];
+      }
+    });
+  };
+
+  const connection = useHybridConnection(settings, handleBluetoothPacket, handleCloudData);
+
+  // --- Demo Simulation Engine ---
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', settings.theme);
+    if (!settings.demoMode) return;
+
+    const interval = setInterval(() => {
+      const simPPM = 400 + Math.random() * 200;
+      setGasPPM(simPPM);
+      setTemperature(22.5 + Math.random());
+      setHumidity(45 + Math.random() * 5);
+      setLastUpdated(new Date());
+      setDataSource('DEMO');
+
+      // Random Demo Emergency Simulation
+      if (Math.random() > 0.95 && !activeAlert) {
+        setActiveAlert({
+          deviceId: 'DEMO-X9',
+          location: 'Apartment 402',
+          ppm: 3500,
+          timestamp: new Date()
+        });
+        setDataSource('LOCAL_MESH');
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [settings.demoMode, activeAlert]);
+
+  // Persistence
+  useEffect(() => {
     localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+    document.documentElement.setAttribute('data-theme', settings.theme);
   }, [settings]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_NODES, JSON.stringify(nodes));
-  }, [nodes]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_AUTH, String(isAuthenticated));
   }, [isAuthenticated]);
 
-  const toggleTheme = () => {
-    setSettings(prev => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }));
-  };
-
-  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
-    const id = Math.random().toString(36).substr(2, 9);
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
-  };
-
-  const addNode = (nodeData: Partial<DeviceNode>) => {
-    const newNode: DeviceNode = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: nodeData.name || 'New Node',
-      location: nodeData.location || 'Unknown',
-      ppm: 0, temp: 0, humidity: 0, battery: 100, rssi: -50,
-      status: 'safe', connectionType: ConnectionType.WIFI, connectionStatus: ConnectionStatus.CONNECTED,
-      ...nodeData
-    };
-    setNodes(prev => [...prev, newNode]);
-    showToast(`Device "${newNode.name}" added.`);
-  };
-
-  const removeNode = (id: string) => {
-    setNodes(prev => prev.filter(n => n.id !== id));
-    if (selectedNodeId === id) setSelectedNodeId('gateway');
-    showToast("Device removed from network.", "info");
-  };
-
-  const updateNode = (id: string, updates: Partial<DeviceNode>) => {
-    setNodes(prev => prev.map(n => n.id === id ? { ...n, ...updates } : n));
-  };
-
-  const updateSettings = (newSettings: Partial<UserSettings>) => {
-    setSettings(prev => ({ ...prev, ...newSettings }));
-  };
+  const status: Status = activeAlert ? 'danger' : (gasPPM >= settings.dangerThreshold ? 'danger' : gasPPM >= settings.warningThreshold ? 'warning' : 'safe');
 
   const value: SafetyState = {
     ...connection,
+    gasPPM,
+    temperature,
+    humidity,
+    status,
+    dataSource,
     nodes,
+    activeAlert,
     settings,
     toasts,
     isAuthenticated,
-    selectedNodeId,
-    setSelectedNodeId,
+    lastUpdated,
     setAuthenticated: setIsAuthenticated,
-    toggleTheme,
-    addNode,
-    removeNode,
-    updateNode,
-    updateSettings,
+    toggleTheme: () => setSettings(prev => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' })),
+    scanAndConnect: async () => {
+      try {
+        await connection.scanAndConnect();
+        showToast("Gateway Linked via Bluetooth", "success");
+      } catch (err: any) {
+        showToast(err.message, "error");
+      }
+    },
+    disconnectDevice: () => {
+      connection.disconnectDevice();
+      showToast("Gateway Unlinked", "info");
+    },
+    updateNode: (id, data) => setNodes(prev => prev.map(n => n.id === id ? { ...n, ...data } : n)),
+    removeNode: (id) => setNodes(prev => prev.filter(n => n.id !== id)),
+    updateSettings: (newSettings) => setSettings(prev => ({ ...prev, ...newSettings })),
     showToast,
+    clearAlert: () => {
+      setActiveAlert(null);
+      setDataSource(settings.demoMode ? 'DEMO' : 'CLOUD');
+    }
   };
 
   return (
